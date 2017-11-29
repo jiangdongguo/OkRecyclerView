@@ -21,12 +21,12 @@ public class HeaderRecyclerViewAdapter extends RecyclerView.Adapter {
 
     public HeaderRecyclerViewAdapter(ArrayList<View> headerViews, ArrayList<View> footerViews, RecyclerView.Adapter adapter) {
         mAdapter = adapter;
-        if (mHeaderViews == null) {
+        if (headerViews == null) {
             mHeaderViews = new ArrayList<>();
         } else {
             mHeaderViews = headerViews;
         }
-        if (mFooterViews == null) {
+        if (footerViews == null) {
             mFooterViews = new ArrayList<>();
         } else {
             mFooterViews = footerViews;
@@ -102,7 +102,7 @@ public class HeaderRecyclerViewAdapter extends RecyclerView.Adapter {
             }
         }
         // item类型为底部
-        return TYPE_FOOTER_VIEW;
+        return HeaderRecyclerViewAdapter.TYPE_FOOTER_VIEW;
     }
 
     public class MyViewHolder extends RecyclerView.ViewHolder{

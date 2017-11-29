@@ -44,10 +44,10 @@ public class OkRecyclerView extends RecyclerView {
         } else {
             mAdapter = adapter;
         }
-        super.setAdapter(adapter);
+        super.setAdapter(mAdapter);
     }
 
-    private void addHeaderView(View view) {
+    public void addHeaderView(View view) {
         mHeaderViews.add(view);
         // 添加头部View，判断HeaderRecyclerViewAdapter是否被创建
         // 如果没有，需要创建它
@@ -58,7 +58,7 @@ public class OkRecyclerView extends RecyclerView {
         }
     }
 
-    private void addFooterView(View view) {
+    public void addFooterView(View view) {
         mFooterViews.add(view);
         // 添加底部View，判断HeaderRecyclerViewAdapter是否被创建
         // 如果没有，需要创建它

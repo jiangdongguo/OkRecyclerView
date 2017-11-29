@@ -4,7 +4,9 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
+import butterknife.BindView;
 import butterknife.ButterKnife;
 
 /** 列表数据适配器
@@ -29,7 +31,7 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.RecyclerViewHolder
 
     @Override
     public void onBindViewHolder(RecyclerViewHolder holder, int position) {
-
+        holder.mTvContent.setText(datas[position]);
     }
 
     @Override
@@ -38,8 +40,13 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.RecyclerViewHolder
     }
 
     public class RecyclerViewHolder extends RecyclerView.ViewHolder{
+        @BindView(R.id.textView)
+        TextView mTvContent;
+
         public RecyclerViewHolder(View itemView) {
             super(itemView);
+            // 绑定item view
+            ButterKnife.bind(this,itemView);
         }
     }
 }
