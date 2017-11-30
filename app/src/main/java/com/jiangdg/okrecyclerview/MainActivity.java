@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ListView;
 
 import com.jiangdg.library.OkRecyclerView;
 
@@ -22,14 +23,18 @@ public class MainActivity extends AppCompatActivity {
         // 绑定View
         ButterKnife.bind(this);
 
-        View headerView = LayoutInflater.from(this).inflate(R.layout.layout_header,null);
-        mRecyclerView.addHeaderView(headerView);
-        mRecyclerView.addFooterView(headerView);
-
         MyAdapter adapter = new MyAdapter();
         adapter.setAdapterData(new String[]{"张三","李四","王五","赵六","张三","李四","王五","赵六","张三",
                 "李四","王五","赵六","张三","李四","王五","赵六"});
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        mRecyclerView.setOnLoadMoreListener(new OkRecyclerView.OnLoadMoreListener() {
+            @Override
+            public void onLoadMore() {
+                // 获取更多数据逻辑
+
+                mRecyclerView.loadMoreComplete();
+            }
+        });
         mRecyclerView.setAdapter(adapter);
     }
 }

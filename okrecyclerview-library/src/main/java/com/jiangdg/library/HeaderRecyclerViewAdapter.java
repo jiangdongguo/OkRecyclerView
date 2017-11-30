@@ -3,6 +3,7 @@ package com.jiangdg.library;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ListView;
 
 import java.util.ArrayList;
 
@@ -104,6 +105,32 @@ public class HeaderRecyclerViewAdapter extends RecyclerView.Adapter {
         // item类型为底部
         return HeaderRecyclerViewAdapter.TYPE_FOOTER_VIEW;
     }
+
+    public boolean isEmpty() {
+        return mAdapter == null;
+    }
+
+    public boolean removeHeader(View v) {
+        for (int i = 0; i < mHeaderViews.size(); i++) {
+            if (mHeaderViews.get(i) == v) {
+                mHeaderViews.remove(i);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean removeFooter(View v) {
+        for (int i = 0; i < mFooterViews.size(); i++) {
+            if (mFooterViews.get(i) == v) {
+                mFooterViews.remove(i);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 
     public class MyViewHolder extends RecyclerView.ViewHolder{
 
