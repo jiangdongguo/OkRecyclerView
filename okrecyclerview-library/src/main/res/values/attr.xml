@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="OkRecyclerView">
+        <!--header-->
+        <attr name="headerLayoutWidth" format="dimension"/>
+        <attr name="headerLayoutBgColor" format="color|reference"/>
+        <attr name="headerProgressStyle" format="enum"/>
+        <attr name="headerText" format="string|reference"/>
+        <attr name="headerTextSize" format="dimension"/>
+        <attr name="headerTextColor" format="color|reference"/>
+        <!--footer-->
+        <attr name="footerLayoutWidth" format="dimension"/>
+        <attr name="footerLayoutBgColor" format="color|reference"/>
+        <attr name="footerProgressStyle" format="enum"/>
+        <attr name="footerText" format="string|reference"/>
+        <attr name="footerTextSize" format="dimension"/>
+        <attr name="footerTextColor" format="color|reference"/>
+    </declare-styleable>
+</resources>

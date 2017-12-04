@@ -1,13 +1,15 @@
 package com.jiangdg.library;
 
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
 
 import java.util.ArrayList;
 
-/**
+/** 自定义RecyclerView
+ *
  * Created by jiangdongguo on 2017/11/29.
  */
 
@@ -19,6 +21,7 @@ public class HeaderRecyclerViewAdapter extends RecyclerView.Adapter {
     private ArrayList<View> mHeaderViews;
     // 存储底部View列表集合
     private ArrayList<View> mFooterViews;
+    private boolean isStragger;
 
     public HeaderRecyclerViewAdapter(ArrayList<View> headerViews, ArrayList<View> footerViews, RecyclerView.Adapter adapter) {
         mAdapter = adapter;
@@ -34,14 +37,32 @@ public class HeaderRecyclerViewAdapter extends RecyclerView.Adapter {
         }
     }
 
+    public void adjustSpanSize() {
+
+    }
+
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         if(viewType == HeaderRecyclerViewAdapter.TYPE_HEADER_VIEW) {
-            // 头部View
-            return new MyViewHolder(mHeaderViews.get(0));
+            // 如果是Stagger布局,设置头部View的Span占一行
+            View headerView = mHeaderViews.get(0);
+            if(isStragger) {
+                StaggeredGridLayoutManager.LayoutParams params = new StaggeredGridLayoutManager.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT);
+                params.setFullSpan(true);
+                headerView.setLayoutParams(params);
+            }
+            return new MyViewHolder(headerView);
         }else if(viewType == HeaderRecyclerViewAdapter.TYPE_FOOTER_VIEW) {
-            // 底部View
-            return  new MyViewHolder(mFooterViews.get(0));
+            // 如果是Stagger布局，设置底部View的Span占一行
+            View footerView = mFooterViews.get(0);
+            if(isStragger) {
+                StaggeredGridLayoutManager.LayoutParams params = new StaggeredGridLayoutManager.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT);
+                params.setFullSpan(true);
+                footerView.setLayoutParams(params);
+            }
+            return  new MyViewHolder(footerView);
         }else {
             // 正常条目
             return mAdapter.onCreateViewHolder(parent,viewType);
