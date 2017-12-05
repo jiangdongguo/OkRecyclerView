@@ -30,6 +30,9 @@ import java.util.ArrayList;
  * Created by jiangdongguo on 2017/11/29.
  */
 public class OkRecyclerView extends RecyclerView {
+    private static final int STYLE_DEFAULT = 0;
+    private static final int STYLE_QQZONE = 1;
+    private static final int STYLE_UCBROWSER = 2;
     // 缓存头部view列表集合
     private ArrayList<View> mHeaderViews = new ArrayList<>();
     // 缓存底部view列表集合
@@ -42,6 +45,7 @@ public class OkRecyclerView extends RecyclerView {
     private int firstVisiblePos;
     private int lastVisiblePos;
     private boolean isLoadingMore;
+    private boolean isRefreshing;
     // 自定义属性变量
     private float mHeaderLayoutWidth;
     private int mHeaderProgressStyle;
@@ -57,7 +61,17 @@ public class OkRecyclerView extends RecyclerView {
     private String mFooterText;
 
     private ProgressBar footerProgress;
+    private ProgressBar headerProgress;
     private TextView footerText;
+    private TextView mTvHeaderText;
+    // 是否需要调整Span标志
+    private boolean isAjustSize;
+    // 是否滑动到顶部
+    private boolean isTop;
+    private float startY;
+    private float endY;
+    private float moveY;
+    private int viewHeight;
 
 
     public OkRecyclerView(Context context) {
@@ -85,7 +99,7 @@ public class OkRecyclerView extends RecyclerView {
                 resources.getDimension(R.dimen.headerLayoutWidth));
         mHeaderLayoutBgColor = ta.getColor(R.styleable.OkRecyclerView_headerLayoutBgColor,
                 resources.getColor(R.color.headerLayoutBgColor));
-        mHeaderProgressStyle = ta.getInt(R.styleable.OkRecyclerView_headerProgressStyle, 2);
+        mHeaderProgressStyle = ta.getInt(R.styleable.OkRecyclerView_headerProgressStyle, 0);
         mHeaderText = ta.getString(R.styleable.OkRecyclerView_headerText);
         mHeaderTextColor = ta.getColor(R.styleable.OkRecyclerView_headerTextColor,
                 resources.getColor(R.color.headerTextColor));
@@ -96,7 +110,7 @@ public class OkRecyclerView extends RecyclerView {
                 resources.getDimension(R.dimen.footerLayoutWidth));
         mFooterLayoutBgColor = ta.getColor(R.styleable.OkRecyclerView_footerLayoutBgColor,
                 resources.getColor(R.color.footerLayoutBgColor));
-        mFooterProgressStyle = ta.getInt(R.styleable.OkRecyclerView_footerProgressStyle, 2);
+        mFooterProgressStyle = ta.getInt(R.styleable.OkRecyclerView_footerProgressStyle, 0);
         mFooterText = ta.getString(R.styleable.OkRecyclerView_footerText);
         mFooterTextColor = ta.getColor(R.styleable.OkRecyclerView_footerTextColor,
                 resources.getColor(R.color.footerTextColor));
@@ -115,15 +129,15 @@ public class OkRecyclerView extends RecyclerView {
         headerLayout.setGravity(Gravity.CENTER);
         headerLayout.setLayoutParams(layoutParams);
         headerLayout.setOrientation(LinearLayout.HORIZONTAL);
-        ProgressBar headerProgress = new ProgressBar(context, null, android.R.attr.progressBarStyleSmall);
+        headerProgress = new ProgressBar(context, null, android.R.attr.progressBarStyleSmall);
         headerProgress.setLayoutParams(childParams);
+        headerProgress.setVisibility(GONE);
         headerLayout.addView(headerProgress);
-        TextView headerText = new TextView(context);
-        headerText.setTextSize(mHeaderTextSize);
-        headerText.setLayoutParams(childParams);
-        headerText.setText(TextUtils.isEmpty(mHeaderText) ? "下拉刷新" : mHeaderText);
-        headerText.setId(0);
-        headerLayout.addView(headerText);
+        mTvHeaderText = new TextView(context);
+        mTvHeaderText.setTextSize(mHeaderTextSize);
+        mTvHeaderText.setLayoutParams(childParams);
+        mTvHeaderText.setText(TextUtils.isEmpty(mHeaderText) ? "下拉刷新" : mHeaderText);
+        headerLayout.addView(mTvHeaderText);
         addHeaderView(headerLayout);
         // 底部View
         LinearLayout footerLayout = new LinearLayout(context);
@@ -157,14 +171,14 @@ public class OkRecyclerView extends RecyclerView {
                 if (getLayoutManager() instanceof LinearLayoutManager) {
                     firstVisiblePos = ((LinearLayoutManager) getLayoutManager()).findFirstVisibleItemPosition();
                     lastVisiblePos = ((LinearLayoutManager) getLayoutManager()).findLastVisibleItemPosition();
-                } else if(getLayoutManager() instanceof StaggeredGridLayoutManager){
+                } else if (getLayoutManager() instanceof StaggeredGridLayoutManager) {
                     int[] firstInto = null;
                     int[] lastInto = null;
-                    ((StaggeredGridLayoutManager) getLayoutManager()).findFirstVisibleItemPositions(firstInto);
-                    ((StaggeredGridLayoutManager) getLayoutManager()).findLastVisibleItemPositions(lastInto);
+                    firstInto = ((StaggeredGridLayoutManager) getLayoutManager()).findFirstVisibleItemPositions(firstInto);
+                    lastInto = ((StaggeredGridLayoutManager) getLayoutManager()).findLastVisibleItemPositions(lastInto);
                     firstVisiblePos = firstInto[0];
                     lastVisiblePos = lastInto[0];
-                } else if(getLayoutManager() instanceof GridLayoutManager) {
+                } else if (getLayoutManager() instanceof GridLayoutManager) {
                     firstVisiblePos = ((GridLayoutManager) getLayoutManager()).findFirstVisibleItemPosition();
                     lastVisiblePos = ((GridLayoutManager) getLayoutManager()).findLastVisibleItemPosition();
                 }
@@ -172,34 +186,46 @@ public class OkRecyclerView extends RecyclerView {
 
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
                 // 如果滑动到的设置给适配器的最后一条数据，并停止滑动
                 // 显示footer，加载更多数据
-                Log.i("ddddddddddddddd", "lastVisiblePos=" + lastVisiblePos +
+                Log.i("ddddddddddddddd", "firstVisiblePos=" + firstVisiblePos + "；lastVisiblePos=" + lastVisiblePos +
                         "；mAdapter.getItemCount()=" + mAdapter.getItemCount());
                 // 当滑动到数据item最后一项，显示Footer View
-                if(lastVisiblePos == mAdapter.getItemCount()-2 && !isLoadingMore) {
-                    footerProgress.setVisibility(GONE);
-                    footerText.setText("查看更多");
-                    LinearLayout mFooterLayout = (LinearLayout) mFooterViews.get(0);
-                    ViewGroup.LayoutParams layoutParams = mFooterLayout.getLayoutParams();
-                    layoutParams.width = LinearLayout.LayoutParams.MATCH_PARENT;
-                    layoutParams.height = LinearLayout.LayoutParams.WRAP_CONTENT;
-                    mFooterLayout.setLayoutParams(layoutParams);
-                    mFooterLayout.setVisibility(VISIBLE);
+//                if (lastVisiblePos == mAdapter.getItemCount() - 2 && !isLoadingMore) {
+//                    footerProgress.setVisibility(GONE);
+//                    footerText.setText("查看更多");
+//                    LinearLayout mFooterLayout = (LinearLayout) mFooterViews.get(0);
+//                    ViewGroup.LayoutParams layoutParams = mFooterLayout.getLayoutParams();
+//                    layoutParams.width = LinearLayout.LayoutParams.MATCH_PARENT;
+//                    layoutParams.height = LinearLayout.LayoutParams.WRAP_CONTENT;
+//                    mFooterLayout.setLayoutParams(layoutParams);
+//                    mFooterLayout.setVisibility(VISIBLE);
+//                }
+//                // 如果还继续滑动，开始加载更多数据
+//                if (lastVisiblePos == mAdapter.getItemCount() - 1 &&
+//                        newState == RecyclerView.SCROLL_STATE_IDLE
+//                        && !isLoadingMore) {
+//                    footerProgress.setVisibility(VISIBLE);
+//                    footerText.setText("正在加载更多...");
+//                    smoothScrollToPosition(totalItems);
+//                    if (loadMoreListener != null) {
+//                        loadMoreListener.onLoadMore();
+//                    }
+//                    isLoadingMore = true;
+//                }
+                // 标记可见item是否为第一条
+                if (firstVisiblePos == 0) {
+                    isTop = true;
+                } else {
+                    isTop = false;
+//                    RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) mHeaderViews.get(0).getLayoutParams();
+//                    params.width = RecyclerView.LayoutParams.MATCH_PARENT;
+//                    params.height = RecyclerView.LayoutParams.WRAP_CONTENT;
+//                    params.setMargins(0, -mHeaderViews.get(0).getHeight(), 0, 0);
+//                    mHeaderViews.get(0).setLayoutParams(params);
                 }
-                // 如果还继续滑动，开始加载更多数据
-                if (lastVisiblePos == mAdapter.getItemCount() - 1 &&
-                        newState == RecyclerView.SCROLL_STATE_IDLE
-                        && !isLoadingMore) {
-                    footerProgress.setVisibility(VISIBLE);
-                    footerText.setText("正在加载更多...");
-                    smoothScrollToPosition(totalItems);
-                    if (loadMoreListener != null) {
-                        loadMoreListener.onLoadMore();
-                    }
-                    isLoadingMore = true;
-                }
-                super.onScrollStateChanged(recyclerView, newState);
+
             }
         });
         /**
@@ -208,9 +234,90 @@ public class OkRecyclerView extends RecyclerView {
         setOnTouchListener(new OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
+                if (isTop) {
+                    switch (event.getAction()) {
+                        case MotionEvent.ACTION_DOWN:
+                            touchDown(event);
+                            break;
+                        case MotionEvent.ACTION_MOVE:
+                            touchMove(event);
+                            break;
+                        case MotionEvent.ACTION_UP:
+                            touchUp();
+                            break;
+                    }
+                }
                 return false;
             }
         });
+    }
+
+    private void touchDown(MotionEvent event) {
+        startY = event.getY();
+    }
+
+    private void touchMove(MotionEvent event) {
+        endY = event.getY();
+        moveY = endY - startY;
+        if (moveY > 0 && !isRefreshing) {
+            scrollToPosition(0);
+            if (mHeaderViews.get(0).getVisibility() == GONE)
+                mHeaderViews.get(0).setVisibility(VISIBLE);
+            //使header随moveY的值从顶部渐渐出现
+            if (moveY >= 400) {
+                moveY = 100 + moveY / 4;
+            } else {
+                moveY = moveY / 2;
+            }
+            viewHeight = mHeaderViews.get(0).getHeight();
+            if (viewHeight <= 0)
+                viewHeight = 130;
+            moveY = moveY - viewHeight;
+            RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) mHeaderViews.get(0).getLayoutParams();
+            params.width = RecyclerView.LayoutParams.MATCH_PARENT;
+            params.height = RecyclerView.LayoutParams.WRAP_CONTENT;
+            params.setMargins(0, (int) moveY, 0, 0);
+            mHeaderViews.get(0).setLayoutParams(params);
+            if (headerProgress.getVisibility() == View.VISIBLE) {
+                headerProgress.setVisibility(View.GONE);
+            }
+            if (moveY > 80) {
+                mTvHeaderText.setText(getResources().getString(R.string.release_to_refresh));
+            } else {
+                mTvHeaderText.setText(getResources().getString(R.string.pull_to_refresh));
+            }
+        } else {
+            if (mHeaderViews.get(0).getVisibility() != GONE && !isRefreshing) {
+                mHeaderViews.get(0).setVisibility(GONE);
+            }
+        }
+    }
+
+    private void touchUp() {
+        if (!isRefreshing && (endY - startY) != 0) {
+            RecyclerView.LayoutParams params1 = (RecyclerView.LayoutParams) mHeaderViews.get(0).getLayoutParams();
+            params1.width = RecyclerView.LayoutParams.MATCH_PARENT;
+            params1.height = RecyclerView.LayoutParams.WRAP_CONTENT;
+
+            if (moveY >= 80) {
+                if (headerProgress.getVisibility() == View.GONE) {
+                    headerProgress.setVisibility(VISIBLE);
+                }
+                mTvHeaderText.setText(getResources().getString(R.string.refreshing));
+                params1.setMargins(0, 0, 0, 0);
+                isRefreshing = true;
+                //刷新数据
+                if (refreshListener != null) {
+                    refreshListener.onPullToRefresh();
+                }
+            } else {
+                if (viewHeight <= 0)
+                    viewHeight = 130;
+                params1.setMargins(0, -viewHeight, 0, 0);
+                mHeaderViews.get(0).setVisibility(GONE);
+            }
+            mHeaderViews.get(0).setLayoutParams(params1);
+        }
     }
 
     @Override
@@ -219,21 +326,30 @@ public class OkRecyclerView extends RecyclerView {
         // 根据情况选择不同适配器
         if (mHeaderViews.size() > 0 || mFooterViews.size() > 0) {
             mAdapter = new HeaderRecyclerViewAdapter(mHeaderViews, mFooterViews, adapter);
+            if (isAjustSize) {
+                ((HeaderRecyclerViewAdapter) mAdapter).adjustSpanSize(getLayoutManager());
+            }
         } else {
             mAdapter = adapter;
         }
         super.setAdapter(mAdapter);
     }
 
-    public void addHeaderView(View view) {
-        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        layoutParams.width = 0;
-        layoutParams.height = 0;
-        view.setLayoutParams(layoutParams);
-        //默认隐藏头部
-        view.setVisibility(View.GONE);
+    @Override
+    public void setLayoutManager(LayoutManager layout) {
+        super.setLayoutManager(layout);
+        // 如果是StaggerGridLayoutManager
+        // 或GridLayoutManager，需要调整头部View和底部View占1行
+        if (layout instanceof StaggeredGridLayoutManager
+                || layout instanceof GridLayoutManager) {
+            isAjustSize = true;
+        }
+    }
 
+    private void addHeaderView(View view) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0);
+        view.setLayoutParams(params);
+        view.setVisibility(GONE);
         mHeaderViews.add(view);
         // 添加头部View，判断HeaderRecyclerViewAdapter是否被创建
         // 如果没有，需要创建它
@@ -244,7 +360,9 @@ public class OkRecyclerView extends RecyclerView {
         }
     }
 
-    public void addFooterView(View view) {
+    private void addFooterView(View view) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        view.setLayoutParams(params);
         mFooterViews.add(view);
         // 添加底部View，判断HeaderRecyclerViewAdapter是否被创建
         // 如果没有，需要创建它
@@ -287,13 +405,19 @@ public class OkRecyclerView extends RecyclerView {
         layoutParams.width = 0;
         layoutParams.height = 0;
         mFooterViews.get(0).setLayoutParams(layoutParams);
-        mFooterViews.get(0).setVisibility(INVISIBLE);
+        mFooterViews.get(0).setVisibility(GONE);
         isLoadingMore = false;
 
     }
 
     // 下拉刷新完成
     public void pullToRefreshComplete() {
-
+        RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) mHeaderViews.get(0).getLayoutParams();
+        params.width = RecyclerView.LayoutParams.MATCH_PARENT;
+        params.height = RecyclerView.LayoutParams.WRAP_CONTENT;
+        params.setMargins(0, -mHeaderViews.get(0).getHeight(), 0, 0);
+        mHeaderViews.get(0).setLayoutParams(params);
+        mHeaderViews.get(0).setVisibility(GONE);
+        isRefreshing = false;
     }
 }

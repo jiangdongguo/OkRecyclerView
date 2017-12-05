@@ -11,7 +11,11 @@
         <!--footer-->
         <attr name="footerLayoutWidth" format="dimension"/>
         <attr name="footerLayoutBgColor" format="color|reference"/>
-        <attr name="footerProgressStyle" format="enum"/>
+        <attr name="footerProgressStyle" format="enum">
+            <enum name="defaultStyle" value="0"/>
+            <enum name="qqzoneStyle" value="1"/>
+            <enum name="ucBrowserStyle" value="2"/>
+        </attr>
         <attr name="footerText" format="string|reference"/>
         <attr name="footerTextSize" format="dimension"/>
         <attr name="footerTextColor" format="color|reference"/>

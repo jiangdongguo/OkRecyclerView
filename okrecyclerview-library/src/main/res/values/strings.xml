@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">recyclerView</string>
+    <string name="release_to_refresh">释放立刻刷新</string>
+    <string name="pull_to_refresh">下拉刷新数据</string>
+    <string name="refreshing">正在刷新数据...</string>
 </resources>

@@ -1,18 +1,18 @@
 package com.jiangdg.library;
 
+import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ListView;
 
 import java.util.ArrayList;
 
-/** 自定义RecyclerView
- *
+/**
+ * 自定义RecyclerView
+ * <p>
  * Created by jiangdongguo on 2017/11/29.
  */
-
 public class HeaderRecyclerViewAdapter extends RecyclerView.Adapter {
     private static final int TYPE_HEADER_VIEW = 1;
     private static final int TYPE_FOOTER_VIEW = 2;
@@ -37,35 +37,51 @@ public class HeaderRecyclerViewAdapter extends RecyclerView.Adapter {
         }
     }
 
-    public void adjustSpanSize() {
-
+    public void adjustSpanSize(final RecyclerView.LayoutManager layoutManager) {
+        if (layoutManager instanceof GridLayoutManager) {
+            // 调整GridLayoutManager Span大小
+            ((GridLayoutManager) layoutManager).setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
+                @Override
+                public int getSpanSize(int position) {
+                    int headerViewSize = mHeaderViews.size();
+                    int adjustPos = position - headerViewSize;
+                    if(position < headerViewSize || adjustPos >= mAdapter.getItemCount()) {
+                        return ((GridLayoutManager) layoutManager).getSpanCount();
+                    }
+                    return 1;
+                }
+            });
+        } else if (layoutManager instanceof StaggeredGridLayoutManager) {
+            // StaggeredGridLayoutManager Span大小,这里只做个标记
+            isStragger = true;
+        }
     }
 
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        if(viewType == HeaderRecyclerViewAdapter.TYPE_HEADER_VIEW) {
+        if (viewType == HeaderRecyclerViewAdapter.TYPE_HEADER_VIEW) {
             // 如果是Stagger布局,设置头部View的Span占一行
             View headerView = mHeaderViews.get(0);
-            if(isStragger) {
+            if (isStragger) {
                 StaggeredGridLayoutManager.LayoutParams params = new StaggeredGridLayoutManager.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT);
+                        0);
                 params.setFullSpan(true);
                 headerView.setLayoutParams(params);
             }
             return new MyViewHolder(headerView);
-        }else if(viewType == HeaderRecyclerViewAdapter.TYPE_FOOTER_VIEW) {
+        } else if (viewType == HeaderRecyclerViewAdapter.TYPE_FOOTER_VIEW) {
             // 如果是Stagger布局，设置底部View的Span占一行
             View footerView = mFooterViews.get(0);
-            if(isStragger) {
+            if (isStragger) {
                 StaggeredGridLayoutManager.LayoutParams params = new StaggeredGridLayoutManager.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT);
                 params.setFullSpan(true);
                 footerView.setLayoutParams(params);
             }
-            return  new MyViewHolder(footerView);
-        }else {
+            return new MyViewHolder(footerView);
+        } else {
             // 正常条目
-            return mAdapter.onCreateViewHolder(parent,viewType);
+            return mAdapter.onCreateViewHolder(parent, viewType);
         }
     }
 
@@ -82,10 +98,23 @@ public class HeaderRecyclerViewAdapter extends RecyclerView.Adapter {
         if (mAdapter != null) {
             adapterCount = mAdapter.getItemCount();
             if (adjPosition < adapterCount) {
-                mAdapter.onBindViewHolder(holder,adjPosition);
+                mAdapter.onBindViewHolder(holder, adjPosition);
                 return;
             }
         }
+    }
+
+    @Override
+    public long getItemId(int position) {
+        int numHeaders = getHeadersCount();
+        if (mAdapter != null && position >= numHeaders) {
+            int adjPosition = position - numHeaders;
+            int adapterCount = mAdapter.getItemCount();
+            if (adjPosition < adapterCount) {
+                return mAdapter.getItemId(adjPosition);
+            }
+        }
+        return -1;
     }
 
     @Override
@@ -127,33 +156,7 @@ public class HeaderRecyclerViewAdapter extends RecyclerView.Adapter {
         return HeaderRecyclerViewAdapter.TYPE_FOOTER_VIEW;
     }
 
-    public boolean isEmpty() {
-        return mAdapter == null;
-    }
-
-    public boolean removeHeader(View v) {
-        for (int i = 0; i < mHeaderViews.size(); i++) {
-            if (mHeaderViews.get(i) == v) {
-                mHeaderViews.remove(i);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public boolean removeFooter(View v) {
-        for (int i = 0; i < mFooterViews.size(); i++) {
-            if (mFooterViews.get(i) == v) {
-                mFooterViews.remove(i);
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-
-    public class MyViewHolder extends RecyclerView.ViewHolder{
+    public class MyViewHolder extends RecyclerView.ViewHolder {
 
         public MyViewHolder(View itemView) {
             super(itemView);
