@@ -8,6 +8,9 @@
         <attr name="headerText" format="string|reference"/>
         <attr name="headerTextSize" format="dimension"/>
         <attr name="headerTextColor" format="color|reference"/>
+        <attr name="pullToRefreshTip" format="string|reference"/>
+        <attr name="releaseToRefreshTip" format="string|reference"/>
+        <attr name="refreshingTip" format="string|reference"/>
         <!--footer-->
         <attr name="footerLayoutWidth" format="dimension"/>
         <attr name="footerLayoutBgColor" format="color|reference"/>
@@ -19,5 +22,7 @@
         <attr name="footerText" format="string|reference"/>
         <attr name="footerTextSize" format="dimension"/>
         <attr name="footerTextColor" format="color|reference"/>
+        <attr name="loadPrepareTip" format="string|reference"/>
+        <attr name="loadingTip" format="string|reference"/>
     </declare-styleable>
 </resources>

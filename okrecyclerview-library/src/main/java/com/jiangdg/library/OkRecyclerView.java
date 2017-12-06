@@ -66,13 +66,17 @@ public class OkRecyclerView extends RecyclerView {
     private TextView mTvHeaderText;
     // 是否需要调整Span标志
     private boolean isAjustSize;
-    // 是否滑动到顶部
-    private boolean isTop;
+    // 是否滑动到顶部,默认为true
+    private boolean isTopItem = true;
     private float startY;
     private float endY;
     private float moveY;
     private int viewHeight;
-
+    private String mReadyToRefreshTip;
+    private String mReleaseToRefreshTip;
+    private String mRefreshingTip;
+    private String mLoadPrepareTip;
+    private String mLoadingTip;
 
     public OkRecyclerView(Context context) {
         super(context);
@@ -99,23 +103,28 @@ public class OkRecyclerView extends RecyclerView {
                 resources.getDimension(R.dimen.headerLayoutWidth));
         mHeaderLayoutBgColor = ta.getColor(R.styleable.OkRecyclerView_headerLayoutBgColor,
                 resources.getColor(R.color.headerLayoutBgColor));
-        mHeaderProgressStyle = ta.getInt(R.styleable.OkRecyclerView_headerProgressStyle, 0);
+        mHeaderProgressStyle = ta.getInt(R.styleable.OkRecyclerView_headerProgressStyle, STYLE_DEFAULT);
         mHeaderText = ta.getString(R.styleable.OkRecyclerView_headerText);
         mHeaderTextColor = ta.getColor(R.styleable.OkRecyclerView_headerTextColor,
                 resources.getColor(R.color.headerTextColor));
         mHeaderTextSize = ta.getDimension(R.styleable.OkRecyclerView_headerTextSize,
                 resources.getDimension(R.dimen.headerTextSize));
+        mReadyToRefreshTip = ta.getString(R.styleable.OkRecyclerView_pullToRefreshTip);
+        mReleaseToRefreshTip = ta.getString(R.styleable.OkRecyclerView_releaseToRefreshTip);
+        mRefreshingTip = ta.getString(R.styleable.OkRecyclerView_refreshingTip);
         // 自定义Footer View属性
         mFooterLayoutWidth = ta.getDimension(R.styleable.OkRecyclerView_footerLayoutWidth,
                 resources.getDimension(R.dimen.footerLayoutWidth));
         mFooterLayoutBgColor = ta.getColor(R.styleable.OkRecyclerView_footerLayoutBgColor,
                 resources.getColor(R.color.footerLayoutBgColor));
-        mFooterProgressStyle = ta.getInt(R.styleable.OkRecyclerView_footerProgressStyle, 0);
+        mFooterProgressStyle = ta.getInt(R.styleable.OkRecyclerView_footerProgressStyle, STYLE_DEFAULT);
         mFooterText = ta.getString(R.styleable.OkRecyclerView_footerText);
         mFooterTextColor = ta.getColor(R.styleable.OkRecyclerView_footerTextColor,
                 resources.getColor(R.color.footerTextColor));
         mFooterTextSize = ta.getDimension(R.styleable.OkRecyclerView_footerTextSize,
                 resources.getDimension(R.dimen.footerTextSize));
+        mLoadPrepareTip = ta.getString(R.styleable.OkRecyclerView_loadPrepareTip);
+        mLoadingTip = ta.getString(R.styleable.OkRecyclerView_loadingTip);
         ta.recycle();
     }
 
@@ -187,45 +196,37 @@ public class OkRecyclerView extends RecyclerView {
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
                 super.onScrollStateChanged(recyclerView, newState);
-                // 如果滑动到的设置给适配器的最后一条数据，并停止滑动
-                // 显示footer，加载更多数据
                 Log.i("ddddddddddddddd", "firstVisiblePos=" + firstVisiblePos + "；lastVisiblePos=" + lastVisiblePos +
                         "；mAdapter.getItemCount()=" + mAdapter.getItemCount());
                 // 当滑动到数据item最后一项，显示Footer View
-//                if (lastVisiblePos == mAdapter.getItemCount() - 2 && !isLoadingMore) {
-//                    footerProgress.setVisibility(GONE);
-//                    footerText.setText("查看更多");
-//                    LinearLayout mFooterLayout = (LinearLayout) mFooterViews.get(0);
-//                    ViewGroup.LayoutParams layoutParams = mFooterLayout.getLayoutParams();
-//                    layoutParams.width = LinearLayout.LayoutParams.MATCH_PARENT;
-//                    layoutParams.height = LinearLayout.LayoutParams.WRAP_CONTENT;
-//                    mFooterLayout.setLayoutParams(layoutParams);
-//                    mFooterLayout.setVisibility(VISIBLE);
-//                }
-//                // 如果还继续滑动，开始加载更多数据
-//                if (lastVisiblePos == mAdapter.getItemCount() - 1 &&
-//                        newState == RecyclerView.SCROLL_STATE_IDLE
-//                        && !isLoadingMore) {
-//                    footerProgress.setVisibility(VISIBLE);
-//                    footerText.setText("正在加载更多...");
-//                    smoothScrollToPosition(totalItems);
-//                    if (loadMoreListener != null) {
-//                        loadMoreListener.onLoadMore();
-//                    }
-//                    isLoadingMore = true;
-//                }
+                if (lastVisiblePos == mAdapter.getItemCount() - 1 && !isLoadingMore) {
+                    footerProgress.setVisibility(GONE);
+                    footerText.setText(TextUtils.isEmpty(mLoadPrepareTip) ? "查看更多" : mLoadPrepareTip);
+                    LinearLayout mFooterLayout = (LinearLayout) mFooterViews.get(0);
+                    ViewGroup.LayoutParams layoutParams = mFooterLayout.getLayoutParams();
+                    layoutParams.width = LinearLayout.LayoutParams.MATCH_PARENT;
+                    layoutParams.height = LinearLayout.LayoutParams.WRAP_CONTENT;
+                    mFooterLayout.setLayoutParams(layoutParams);
+                    if(mFooterLayout.getVisibility() == GONE) {
+                        mFooterLayout.setVisibility(VISIBLE);
+                    }
+
+                    if(newState == RecyclerView.SCROLL_STATE_IDLE) {
+                        footerProgress.setVisibility(VISIBLE);
+                        footerText.setText(TextUtils.isEmpty(mLoadingTip) ? "正在加载更多..." : mLoadingTip);
+                        smoothScrollToPosition(totalItems);
+                        if (loadMoreListener != null) {
+                            loadMoreListener.onLoadMore();
+                        }
+                        isLoadingMore = true;
+                    }
+                }
                 // 标记可见item是否为第一条
                 if (firstVisiblePos == 0) {
-                    isTop = true;
+                    isTopItem = true;
                 } else {
-                    isTop = false;
-//                    RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) mHeaderViews.get(0).getLayoutParams();
-//                    params.width = RecyclerView.LayoutParams.MATCH_PARENT;
-//                    params.height = RecyclerView.LayoutParams.WRAP_CONTENT;
-//                    params.setMargins(0, -mHeaderViews.get(0).getHeight(), 0, 0);
-//                    mHeaderViews.get(0).setLayoutParams(params);
+                    isTopItem = false;
                 }
-
             }
         });
         /**
@@ -234,7 +235,7 @@ public class OkRecyclerView extends RecyclerView {
         setOnTouchListener(new OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                if (isTop) {
+                if (isTopItem) {
                     switch (event.getAction()) {
                         case MotionEvent.ACTION_DOWN:
                             touchDown(event);
@@ -261,9 +262,7 @@ public class OkRecyclerView extends RecyclerView {
         moveY = endY - startY;
         if (moveY > 0 && !isRefreshing) {
             scrollToPosition(0);
-            if (mHeaderViews.get(0).getVisibility() == GONE)
-                mHeaderViews.get(0).setVisibility(VISIBLE);
-            //使header随moveY的值从顶部渐渐出现
+            // 计算向下滑动距离，moveY
             if (moveY >= 400) {
                 moveY = 100 + moveY / 4;
             } else {
@@ -273,18 +272,24 @@ public class OkRecyclerView extends RecyclerView {
             if (viewHeight <= 0)
                 viewHeight = 130;
             moveY = moveY - viewHeight;
+            // 使header随moveY的值从顶部渐渐出现
+            if (mHeaderViews.get(0).getVisibility() == GONE)
+                mHeaderViews.get(0).setVisibility(VISIBLE);
             RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) mHeaderViews.get(0).getLayoutParams();
             params.width = RecyclerView.LayoutParams.MATCH_PARENT;
             params.height = RecyclerView.LayoutParams.WRAP_CONTENT;
             params.setMargins(0, (int) moveY, 0, 0);
             mHeaderViews.get(0).setLayoutParams(params);
+            // 根据moveY的值，更新Header View内容
+            if (moveY > 80) {
+                String releaseTip = getResources().getString(R.string.release_to_refresh);
+                mTvHeaderText.setText(TextUtils.isEmpty(mReleaseToRefreshTip) ? releaseTip : mReleaseToRefreshTip);
+            } else {
+                String pullToTip = getResources().getString(R.string.pull_to_refresh);
+                mTvHeaderText.setText(TextUtils.isEmpty(mReadyToRefreshTip) ? pullToTip : mReadyToRefreshTip);
+            }
             if (headerProgress.getVisibility() == View.VISIBLE) {
                 headerProgress.setVisibility(View.GONE);
-            }
-            if (moveY > 80) {
-                mTvHeaderText.setText(getResources().getString(R.string.release_to_refresh));
-            } else {
-                mTvHeaderText.setText(getResources().getString(R.string.pull_to_refresh));
             }
         } else {
             if (mHeaderViews.get(0).getVisibility() != GONE && !isRefreshing) {
@@ -303,7 +308,8 @@ public class OkRecyclerView extends RecyclerView {
                 if (headerProgress.getVisibility() == View.GONE) {
                     headerProgress.setVisibility(VISIBLE);
                 }
-                mTvHeaderText.setText(getResources().getString(R.string.refreshing));
+                String refreshingTip = getResources().getString(R.string.refreshing);
+                mTvHeaderText.setText(TextUtils.isEmpty(mRefreshingTip) ? refreshingTip : mRefreshingTip);
                 params1.setMargins(0, 0, 0, 0);
                 isRefreshing = true;
                 //刷新数据
@@ -349,7 +355,7 @@ public class OkRecyclerView extends RecyclerView {
     private void addHeaderView(View view) {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0);
         view.setLayoutParams(params);
-        view.setVisibility(GONE);
+        view.setVisibility(View.GONE);
         mHeaderViews.add(view);
         // 添加头部View，判断HeaderRecyclerViewAdapter是否被创建
         // 如果没有，需要创建它
@@ -363,6 +369,7 @@ public class OkRecyclerView extends RecyclerView {
     private void addFooterView(View view) {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         view.setLayoutParams(params);
+
         mFooterViews.add(view);
         // 添加底部View，判断HeaderRecyclerViewAdapter是否被创建
         // 如果没有，需要创建它
